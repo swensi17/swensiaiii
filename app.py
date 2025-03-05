@@ -13,20 +13,21 @@ def import_module(module_path):
     spec.loader.exec_module(module)
     return module
 
-chat_module = import_module("2")
+chat_module = import_module("chat_model")
 
 # Настройка Flask
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='', static_folder='.')
 CORS(app)
 
 # Инициализация чат-модели
 chat_adapter = chat_module.SearchGPTAdapter()
 
-# Маршруты для статических файлов
+# Маршрут для главной страницы
 @app.route('/')
 def index():
-    return send_from_directory('.', 'chat.html')
+    return send_from_directory('.', 'index.html')
 
+# Маршрут для статических файлов
 @app.route('/<path:path>')
 def serve_file(path):
     return send_from_directory('.', path)
