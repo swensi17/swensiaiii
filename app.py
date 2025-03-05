@@ -13,7 +13,7 @@ def import_module(module_path):
     spec.loader.exec_module(module)
     return module
 
-chat_module = import_module("chat_model")
+chat_module = import_module("2")
 
 # Настройка Flask
 app = Flask(__name__)
