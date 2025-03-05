@@ -27,6 +27,16 @@ document.addEventListener('DOMContentLoaded', () => {
         creative: "Ты креативный AI. Генерируй уникальные идеи, предлагай нестандартные решения, мысли творчески и вдохновляй."
     };
 
+    // Конфигурация API
+    const API_CONFIG = {
+        BASE_URL: "https://text.pollinations.ai",
+        BACKUP_URLS: [
+            "https://api.pollinations.ai",
+            "https://api-backup.pollinations.ai",
+            "https://api2.pollinations.ai"
+        ]
+    };
+
     // Функция для блокировки/разблокировки UI
     function toggleUI(disabled) {
         userInput.disabled = disabled;
@@ -293,9 +303,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Функция для отправки сообщения
     async function sendMessage(message, isRegeneration = false, targetElement = null, previousContent = '') {
-        if (isGenerating) return;
-        
         try {
+            if (isGenerating) return;
             toggleUI(true);
 
             if (!isRegeneration && !targetElement) {
@@ -317,81 +326,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 messageText = messageContent.querySelector('.message-text');
             }
 
-            // Создаем полный список сообщений с системным сообщением
-            let fullMessages = [...messageHistory];
-            if (!fullMessages.some(msg => msg.role === 'system')) {
-                fullMessages.unshift({
-                    role: "system",
-                    content: roleSystemMessages[currentRole]
-                });
-            }
-
-            // Добавляем случайный seed для разнообразия ответов
-            const randomSeed = Math.floor(Math.random() * 1000000);
-
-            // Пробуем получить ответ от API
-            const response = await tryFetchWithBackup(`${BASE_URL}/openai`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Origin': window.location.origin,
-                    'Access-Control-Allow-Origin': '*'
-                },
-                body: JSON.stringify({
-                    model: currentModel,
-                    messages: fullMessages,
-                    seed: randomSeed
-                })
-            });
-
-            const data = await response.json();
+            // Отправляем запрос к AI
+            const response = await directAIChat([{ role: "user", content: message }]);
             
-            if (!data.choices || !data.choices[0]) {
-                throw new Error('Некорректный ответ от API');
-            }
-
-            const aiResponse = data.choices[0].message.content;
-
-            // Обрабатываем ответ
-            if (targetElement) {
-                const messageContent = messageText.closest('.message-content');
-                const typingIndicator = messageContent.querySelector('.typing-indicator');
-                if (typingIndicator) typingIndicator.remove();
+            if (response) {
+                const aiResponse = response.response;
                 
-                if (existingContent.includes('</code></pre>')) {
-                    const lastCodeBlock = existingContent.lastIndexOf('</code></pre>');
-                    const beforeCode = existingContent.substring(0, lastCodeBlock);
-                    const codeMatch = existingContent.match(/<pre data-language="([^"]+)"><code[^>]*>/);
-                    const language = codeMatch ? codeMatch[1] : 'text';
-                    const newContent = beforeCode + highlightCode(aiResponse, language) + '</code></pre>';
-                    messageText.innerHTML = newContent;
+                if (targetElement) {
+                    const messageContent = messageText.closest('.message-content');
+                    const typingIndicator = messageContent.querySelector('.typing-indicator');
+                    if (typingIndicator) typingIndicator.remove();
+                    
+                    if (existingContent.includes('</code></pre>')) {
+                        const lastCodeBlock = existingContent.lastIndexOf('</code></pre>');
+                        const beforeCode = existingContent.substring(0, lastCodeBlock);
+                        const codeMatch = existingContent.match(/<pre data-language="([^"]+)"><code[^>]*>/);
+                        const language = codeMatch ? codeMatch[1] : 'text';
+                        const formattedResponse = '```' + language + '\n' + aiResponse + '\n```';
+                        const newContent = beforeCode + highlightCode(aiResponse, language) + '</code></pre>';
+                        messageText.innerHTML = newContent;
+                    } else {
+                        const newContent = existingContent + '\n\n' + aiResponse;
+                        messageText.innerHTML = formatMarkdown(newContent);
+                    }
                 } else {
-                    const newContent = existingContent + '\n\n' + aiResponse;
-                    messageText.innerHTML = formatMarkdown(newContent);
+                    const messageContent = messageText.closest('.message-content');
+                    const typingIndicator = messageContent.querySelector('.typing-indicator');
+                    if (typingIndicator) typingIndicator.remove();
+                    messageText.innerHTML = formatMarkdown(aiResponse);
                 }
-                
-                if (messageHistory.length > 0) {
-                    messageHistory[messageHistory.length - 1].content = messageText.textContent;
+
+                // Автопрокрутка, если включена
+                if (document.getElementById('autoScroll').checked) {
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
                 }
-            } else {
-                messageHistory.push({ role: "assistant", content: aiResponse });
-                const messageContent = messageText.closest('.message-content');
-                const typingIndicator = messageContent.querySelector('.typing-indicator');
-                if (typingIndicator) typingIndicator.remove();
-                messageText.innerHTML = formatMarkdown(aiResponse);
             }
-
-            // Автопрокрутка, если включена
-            if (document.getElementById('autoScroll').checked) {
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
-
-            // Звуковое уведомление, если включено
-            if (document.getElementById('soundNotifications').checked) {
-                const audio = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAEAAABVgANTU1NTU1Q0NDQ0NDUFBQUFBQXl5eXl5ea2tra2tra3l5eXl5eYaGhoaGhpSUlJSUlKGhoaGhoaGvr6+vr6+8vLy8vLzKysrKysrX19fX19fX5OTk5OTk8vLy8vLy////////AAAAAExhdmM1OC4xMwAAAAAAAAAAAAAAACQCgAAAAAAAAAVY82AhbwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/+MYxAALACwAAP/AADwQKVE9YWDGPkQWpT66yk4+zIiYPoTUaT3tnU+OkZUwY0ZIg/oGjvxzqCAIDv8T5JbjDvwkcHIQ+D/8QSC3/+MYxA8L0DU0A/9iABnwW8Z+75zorLCZv1nCthQ5QFRVU8IBkHLFW1v/P8L2dUWpXOmZ/+XetliFAGkD55fQDCR/86KMYD/+MYxBULwDU4AP8eADwMSLL8mY7yZfON1aX5OXrJ2/l5W+oQj4iyOfPz5H/XzMiNYEdUhDtD5weBYFwXB8HwfACgIAgAAA==');
-                audio.play();
-            }
-
         } catch (error) {
             console.error('Error:', error);
             if (!targetElement) {
@@ -399,8 +368,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (lastAiMessage) {
                     lastAiMessage.remove();
                 }
-                showToast(`Ошибка при отправке запроса: ${error.message}. Попробуйте другую модель или повторите позже.`, 'error');
             }
+            showToast('Произошла ошибка при обработке запроса', 'error');
         } finally {
             toggleUI(false);
         }
@@ -755,26 +724,43 @@ document.addEventListener('DOMContentLoaded', () => {
         content: roleSystemMessages[currentRole]
     }];
 
+    // Функция для проверки доступности API
+    async function checkApiAvailability(url) {
+        try {
+            const response = await fetch(url, { method: 'HEAD' });
+            return response.ok;
+        } catch (error) {
+            console.warn(`API ${url} недоступен:`, error);
+            return false;
+        }
+    }
+
+    // Функция для попытки использования резервных URL
     async function tryFetchWithBackup(url, options) {
-        for (const baseUrl of [BASE_URL, ...BACKUP_URLS]) {
+        const urls = [url, ...API_CONFIG.BACKUP_URLS];
+        
+        for (const currentUrl of urls) {
             try {
-                const response = await fetch(url.replace(BASE_URL, baseUrl), options);
+                const response = await fetch(currentUrl, options);
                 if (response.ok) {
                     return response;
                 }
+                console.warn(`Ошибка при запросе к ${currentUrl}:`, response.status);
             } catch (error) {
-                console.warn(`Failed to fetch from ${baseUrl}:`, error);
+                console.warn(`Ошибка при запросе к ${currentUrl}:`, error);
             }
         }
         throw new Error('Все API endpoints недоступны');
     }
 
+    // Функция для прямого общения с AI
     async function directAIChat(messages, model = currentModel || DEFAULT_MODEL) {
         try {
             // Проверяем наличие системного сообщения
             const hasSystemMessage = messages.some(msg => msg.role === 'system');
             
             if (!hasSystemMessage) {
+                // Добавляем системное сообщение в зависимости от выбранной роли
                 const currentRole = localStorage.getItem('selectedRole') || 'assistant';
                 messages.unshift({
                     role: "system",
@@ -782,35 +768,64 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
+            // Добавляем историю диалога, если включена память контекста
+            let fullMessages = messages;
+            if (document.getElementById('contextMemory').checked) {
+                fullMessages = [...messageHistory, ...messages];
+            }
+
             const options = {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Origin': window.location.origin,
                     'Access-Control-Allow-Origin': '*'
                 },
                 body: JSON.stringify({
                     model: model,
-                    messages: messages,
+                    messages: fullMessages,
                     seed: Math.floor(Math.random() * 1000000)
                 })
             };
 
-            // Используем резервные URL если основной недоступен
-            const response = await tryFetchWithBackup(`${BASE_URL}/openai`, options);
+            // Пробуем получить ответ от API
+            const response = await tryFetchWithBackup(`${API_CONFIG.BASE_URL}/openai`, options);
             const data = await response.json();
 
-            if (!data.choices || !data.choices[0]) {
+            if (!data || !data.choices || !data.choices[0]) {
                 throw new Error('Некорректный ответ от API');
             }
 
+            const aiResponse = data.choices[0].message.content;
+
+            // Сохраняем сообщения в историю только если включена память контекста
+            if (document.getElementById('contextMemory').checked) {
+                messages.forEach(msg => {
+                    if (msg.role !== 'system') {
+                        messageHistory.push(msg);
+                    }
+                });
+                messageHistory.push({
+                    role: "assistant",
+                    content: aiResponse
+                });
+
+                // Ограничиваем историю последними 10 сообщениями
+                messageHistory = messageHistory.slice(-10);
+            }
+
+            // Воспроизводим звук уведомления, если включено
+            if (document.getElementById('soundNotifications').checked) {
+                const audio = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAEAAABVgANTU1NTU1Q0NDQ0NDUFBQUFBQXl5eXl5ea2tra2tra3l5eXl5eYaGhoaGhpSUlJSUlKGhoaGhoaGvr6+vr6+8vLy8vLzKysrKysrX19fX19fX5OTk5OTk8vLy8vLy////////AAAAAExhdmM1OC4xMwAAAAAAAAAAAAAAACQCgAAAAAAAAAVY82AhbwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/+MYxAALACwAAP/AADwQKVE9YWDGPkQWpT66yk4+zIiYPoTUaT3tnU+OkZUwY0ZIg/oGjvxzqCAIDv8T5JbjDvwkcHIQ+D/8QSC3/+MYxA8L0DU0A/9iABnwW8Z+75zorLCZv1nCthQ5QFRVU8IBkHLFW1v/P8L2dUWpXOmZ/+XetliFAGkD55fQDCR/86KMYD/+MYxBULwDU4AP8eADwMSLL8mY7yZfON1aX5OXrJ2/l5W+oQj4iyOfPz5H/XzMiNYEdUhDtD5weBYFwXB8HwfACgIAgAAA==');
+                audio.play();
+            }
+
             return {
-                response: data.choices[0].message.content,
+                response: aiResponse,
                 model: data.model || model
             };
         } catch (error) {
             console.error('Error in directAIChat:', error);
-            showToast(`Ошибка при отправке запроса: ${error.message}. Попробуйте другую модель или повторите позже.`, 'error');
+            showToast('Ошибка при получении ответа от AI. Попробуйте другую модель или повторите позже.', 'error');
             return null;
         }
     }
