@@ -9,6 +9,15 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1a1a1a">
     <meta name="format-detection" content="telephone=no">
+    <meta name="application-name" content="AI Chat">
+    <meta name="msapplication-TileColor" content="#1a1a1a">
+    <meta name="msapplication-tap-highlight" content="no">
+    <meta name="description" content="AI Chat - Ваш умный собеседник">
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+    <link rel="apple-touch-startup-image" href="icons/splash.png">
+    
     <title>AI Чат - AI Creative Hub</title>
     <link rel="stylesheet" href="styles/chat.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -169,6 +178,17 @@
                 <div class="settings-section">
                     <h3>Дополнительные настройки</h3>
                     <div class="settings-options">
+                        <div class="slider-control">
+                            <label>Детализация ответов</label>
+                            <div class="slider-container">
+                                <input type="range" id="detailLevel" min="0" max="2" step="1" value="1">
+                                <div class="slider-labels">
+                                    <span>Кратко</span>
+                                    <span>Средне</span>
+                                    <span>Подробно</span>
+                                </div>
+                            </div>
+                        </div>
                         <label class="switch-label">
                             <span>Память контекста</span>
                             <label class="switch">
@@ -401,11 +421,9 @@
 
         // Обработчик новой беседы
         document.getElementById('newChat').addEventListener('click', function() {
-            if (!isGenerating) {
-                clearConversationHistory();
-                chatMessages.innerHTML = '';
-                addMessage('Привет! Чем могу помочь? 😊', false);
-            }
+            clearConversationHistory();
+            chatMessages.innerHTML = '';
+            addMessage('Привет! Чем могу помочь? 😊', false);
         });
 
         // Инициализация при загрузке страницы
@@ -425,6 +443,18 @@
                 }
             });
         });
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful');
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
     </script>
 </body>
 </html> 
