@@ -37,6 +37,149 @@ document.addEventListener('DOMContentLoaded', () => {
         ]
     };
 
+    // Инициализация переменных для работы с изображениями
+    const imageUploadBtn = document.getElementById('imageUpload');
+    const galleryModal = document.getElementById('galleryModal');
+    const closeGallery = document.querySelector('.close-gallery');
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const galleryGrid = document.getElementById('galleryGrid');
+    
+    let uploadedImages = [];
+
+    // Функция для конвертации изображения в base64
+    function getBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+    }
+
+    // Функция для добавления изображения в галерею
+    async function addImageToGallery(file) {
+        try {
+            const base64 = await getBase64(file);
+            const galleryItem = document.createElement('div');
+            galleryItem.className = 'gallery-item';
+            
+            const img = document.createElement('img');
+            img.src = base64;
+            
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'remove-image';
+            removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            
+            removeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const index = uploadedImages.indexOf(base64);
+                if (index > -1) {
+                    uploadedImages.splice(index, 1);
+                }
+                galleryItem.remove();
+                const fileInfo = document.querySelector('.file-info');
+                if (fileInfo) fileInfo.remove();
+            });
+            
+            galleryItem.appendChild(img);
+            galleryItem.appendChild(removeBtn);
+            galleryGrid.appendChild(galleryItem);
+            uploadedImages.push(base64);
+
+            // Закрываем модальное окно галереи
+            galleryModal.classList.remove('active');
+            
+            // Создаем и добавляем информацию о файле над полем ввода
+            const fileInfo = document.createElement('div');
+            fileInfo.className = 'file-info';
+            fileInfo.innerHTML = `
+                <div class="file-preview">
+                    <div class="file-info-content">
+                        <i class="fas fa-image"></i>
+                        <span class="file-name">${file.name}</span>
+                        <span class="file-size">${(file.size / 1024).toFixed(1)} KB</span>
+                    </div>
+                    <button class="remove-file" title="Удалить">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            // Добавляем информацию о файле перед панелью ввода
+            const chatInputPanel = document.querySelector('.chat-input-panel');
+            chatInputPanel.insertBefore(fileInfo, chatInputPanel.firstChild);
+            
+            // Добавляем обработчик для кнопки удаления
+            const removeFileBtn = fileInfo.querySelector('.remove-file');
+            removeFileBtn.addEventListener('click', () => {
+                const index = uploadedImages.indexOf(base64);
+                if (index > -1) {
+                    uploadedImages.splice(index, 1);
+                }
+                fileInfo.remove();
+            });
+            
+            // Устанавливаем фокус на поле ввода
+            userInput.focus();
+            
+            return base64;
+        } catch (error) {
+            console.error('Error adding image to gallery:', error);
+            showToast('Ошибка при добавлении изображения', 'error');
+        }
+    }
+
+    // Функция для отправки сообщения с изображением
+    async function sendImageMessage(base64) {
+        const userInput = document.getElementById('userInput');
+        const message = userInput.value.trim();
+        
+        // Создаем контейнер для изображения
+        const imageContainer = document.createElement('div');
+        imageContainer.className = 'image-message';
+        imageContainer.style.cssText = `
+            background: rgba(42, 42, 42, 0.6);
+            border-radius: 12px;
+            padding: 10px;
+            margin-bottom: 10px;
+        `;
+
+        // Создаем превью изображения
+        const imagePreview = document.createElement('img');
+        imagePreview.src = base64;
+        imagePreview.style.cssText = `
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+            display: block;
+            margin-bottom: ${message ? '10px' : '0'};
+        `;
+        imageContainer.appendChild(imagePreview);
+
+        // Если есть текстовое сообщение, добавляем его под изображением
+        if (message) {
+            const textMessage = document.createElement('div');
+            textMessage.textContent = message;
+            textMessage.style.cssText = `
+                color: #e6e6e6;
+                font-size: 0.9rem;
+                line-height: 1.5;
+            `;
+            imageContainer.appendChild(textMessage);
+        }
+
+        // Добавляем сообщение в чат
+        addMessage(imageContainer.outerHTML, true);
+        
+        // Очищаем поле ввода и сбрасываем его высоту
+        userInput.value = '';
+        userInput.style.height = 'auto';
+        
+        // Отправляем сообщение на сервер
+        await sendMessage(imageContainer.outerHTML);
+    }
+
     // Функция для блокировки/разблокировки UI
     function toggleUI(disabled) {
         userInput.disabled = disabled;
@@ -47,6 +190,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Функция для форматирования Markdown
     function formatMarkdown(text) {
+        // Обработка изображений
+        text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
+            return `<img src="${src}" alt="${alt}" onclick="window.open(this.src, '_blank')">`;
+        });
+        
         // Сохраняем блоки кода перед обработкой
         const codeBlocks = [];
         text = text.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
@@ -103,71 +251,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Функция для подсветки синтаксиса кода
     function highlightCode(code, language) {
-        // Удаляем HTML-теги для безопасности
-        code = code.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return `<div class="code-block">
+            <div class="code-header">
+                <span class="code-language">${language}</span>
+                <button class="copy-code-btn" onclick="copyCode(this)">
+                    <i class="fas fa-copy"></i>
+                    <span>Копировать</span>
+                </button>
+            </div>
+            <pre class="code-content">${code}</pre>
+        </div>`;
+    }
 
-        // Определяем правила подсветки синтаксиса для разных языков
-        const rules = {
-            python: [
-                { pattern: /#.*$/gm, class: 'comment' },
-                { pattern: /("""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g, class: 'string' },
-                { pattern: /\b(def|class|if|else|elif|for|while|try|except|finally|with|as|import|from|return|and|or|not|in|is|True|False|None|break|continue)\b/g, class: 'keyword' },
-                { pattern: /\b([a-zA-Z_]\w*)\s*\(/g, class: 'function' },
-                { pattern: /\b\d+\.?\d*\b/g, class: 'number' },
-                { pattern: /[+\-*/%=<>!&|^~]+/g, class: 'operator' },
-                { pattern: /\b[A-Z_][A-Z0-9_]*\b/g, class: 'variable' }
-            ],
-            javascript: [
-                { pattern: /\/\/.*$|\/\*[\s\S]*?\*\//gm, class: 'comment' },
-                { pattern: /(["'`])(.*?)\1/g, class: 'string' },
-                { pattern: /\b(function|var|let|const|if|else|for|while|do|switch|case|break|return|try|catch|finally|throw|new|typeof|instanceof|this|class|extends|super|import|export|default|null|undefined|true|false)\b/g, class: 'keyword' },
-                { pattern: /\b([a-zA-Z_$]\w*)\s*\(/g, class: 'function' },
-                { pattern: /\b\d+\.?\d*\b/g, class: 'number' },
-                { pattern: /[+\-*/%=<>!&|^~]+/g, class: 'operator' },
-                { pattern: /\b[A-Z_][A-Z0-9_]*\b/g, class: 'variable' }
-            ]
-        };
-
-        // Выбираем правила в зависимости от языка
-        const langRules = rules[language.toLowerCase()] || [];
-
-        // Создаем массив для хранения всех совпадений
-        let matches = [];
-
-        // Находим все совпадения для каждого правила
-        langRules.forEach(rule => {
-            let match;
-            while ((match = rule.pattern.exec(code)) !== null) {
-                matches.push({
-                    index: match.index,
-                    length: match[0].length,
-                    text: match[0],
-                    class: rule.class
-                });
-            }
-        });
-
-        // Сортируем совпадения по позиции
-        matches.sort((a, b) => a.index - b.index);
-
-        // Собираем финальный код с подсветкой
-        let result = '';
-        let lastIndex = 0;
-
-        matches.forEach(match => {
-            if (match.index > lastIndex) {
-                result += code.slice(lastIndex, match.index);
-            }
-            result += `<span class="${match.class}">${match.text}</span>`;
-            lastIndex = match.index + match.length;
-        });
-
-        // Добавляем оставшийся текст
-        if (lastIndex < code.length) {
-            result += code.slice(lastIndex);
+    async function copyCode(button) {
+        const codeBlock = button.closest('.code-block');
+        const codeContent = codeBlock.querySelector('.code-content').textContent;
+        
+        try {
+            await navigator.clipboard.writeText(codeContent);
+            button.innerHTML = '<i class="fas fa-check"></i><span>Скопировано</span>';
+            button.classList.add('copied');
+            
+            setTimeout(() => {
+                button.innerHTML = '<i class="fas fa-copy"></i><span>Копировать</span>';
+                button.classList.remove('copied');
+            }, 2000);
+        } catch (err) {
+            console.error('Ошибка при копировании:', err);
+            showToast('Ошибка при копировании кода', 'error');
         }
-
-        return result;
     }
 
     // Функция для добавления сообщения в чат
@@ -243,7 +355,11 @@ document.addEventListener('DOMContentLoaded', () => {
             continueBtn.addEventListener('click', () => {
                 if (!isGenerating) {
                     const continuePrompt = "continue";
-                    sendMessage(continuePrompt, false, messageText, content);
+                    continueBtn.classList.add('thinking');
+                    sendMessage(continuePrompt, false, messageText, content)
+                        .finally(() => {
+                            continueBtn.classList.remove('thinking');
+                        });
                 }
             });
         }
@@ -310,11 +426,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!isRegeneration && !targetElement) {
                 messageHistory.push({ role: "user", content: message });
                 addMessage(message, true);
-            }
+        }
 
             let messageText;
             let existingContent = '';
-            
+
             if (targetElement) {
                 messageText = targetElement;
                 existingContent = previousContent || messageText.textContent;
@@ -324,19 +440,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const avatar = messageContent.querySelector('.ai-avatar');
                 avatar.insertAdjacentHTML('afterend', '<span class="typing-indicator">печатает</span>');
                 messageText = messageContent.querySelector('.message-text');
-            }
+    }
 
             // Отправляем запрос к AI
             const response = await directAIChat([{ role: "user", content: message }]);
-            
+
             if (response) {
                 const aiResponse = response.response;
-                
+            
                 if (targetElement) {
                     const messageContent = messageText.closest('.message-content');
                     const typingIndicator = messageContent.querySelector('.typing-indicator');
                     if (typingIndicator) typingIndicator.remove();
-                    
+            
                     if (existingContent.includes('</code></pre>')) {
                         const lastCodeBlock = existingContent.lastIndexOf('</code></pre>');
                         const beforeCode = existingContent.substring(0, lastCodeBlock);
@@ -348,27 +464,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else {
                         const newContent = existingContent + '\n\n' + aiResponse;
                         messageText.innerHTML = formatMarkdown(newContent);
-                    }
+            }
                 } else {
                     const messageContent = messageText.closest('.message-content');
                     const typingIndicator = messageContent.querySelector('.typing-indicator');
                     if (typingIndicator) typingIndicator.remove();
                     messageText.innerHTML = formatMarkdown(aiResponse);
-                }
+            }
 
                 // Автопрокрутка, если включена
                 if (document.getElementById('autoScroll').checked) {
                     chatMessages.scrollTop = chatMessages.scrollHeight;
-                }
             }
+                    }
         } catch (error) {
             console.error('Error:', error);
             if (!targetElement) {
                 const lastAiMessage = chatMessages.querySelector('.ai-message:last-child');
                 if (lastAiMessage) {
                     lastAiMessage.remove();
-                }
-            }
+        }
+
+    }
             showToast('Произошла ошибка при обработке запроса', 'error');
         } finally {
             toggleUI(false);
@@ -386,13 +503,88 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Обработчики событий
-    sendButton.addEventListener('click', handleSend);
-
-    userInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey && !isGenerating) {
-            e.preventDefault();
+    sendButton.addEventListener('click', async () => {
+        if (uploadedImages.length > 0) {
+            const lastImage = uploadedImages[uploadedImages.length - 1];
+            uploadedImages = [];
+            const fileInfo = document.querySelector('.file-info');
+            if (fileInfo) fileInfo.remove();
+            await sendImageMessage(lastImage);
+        } else {
             handleSend();
         }
+    });
+
+    // Обработчик нажатия Enter в поле ввода
+    userInput.addEventListener('keydown', async (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (uploadedImages.length > 0) {
+                const lastImage = uploadedImages[uploadedImages.length - 1];
+                uploadedImages = [];
+                const fileInfo = document.querySelector('.file-info');
+                if (fileInfo) fileInfo.remove();
+                await sendImageMessage(lastImage);
+            } else {
+                handleSend();
+            }
+        }
+    });
+
+    // Обработчики событий для галереи
+    imageUploadBtn.addEventListener('click', () => {
+        galleryModal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    });
+
+    closeGallery.addEventListener('click', () => {
+        galleryModal.classList.remove('active');
+        document.body.style.overflow = '';
+    });
+
+    galleryModal.addEventListener('click', (e) => {
+        if (e.target === galleryModal) {
+            galleryModal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    });
+
+    uploadArea.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.style.borderColor = '#0066ff';
+        uploadArea.style.background = 'rgba(0, 102, 255, 0.1)';
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.style.borderColor = '#444';
+        uploadArea.style.background = 'none';
+    });
+
+    uploadArea.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        uploadArea.style.borderColor = '#444';
+        uploadArea.style.background = 'none';
+        
+        const files = e.dataTransfer.files;
+        for (const file of files) {
+            if (file.type.startsWith('image/')) {
+                await addImageToGallery(file);
+            }
+        }
+    });
+
+    fileInput.addEventListener('change', async () => {
+        const files = fileInput.files;
+        for (const file of files) {
+            if (file.type.startsWith('image/')) {
+                await addImageToGallery(file);
+            }
+        }
+        fileInput.value = '';
     });
 
     // Автоматическое изменение высоты текстового поля
@@ -404,7 +596,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Обработчик смены модели
     modelSelect.addEventListener('change', (e) => {
         currentModel = e.target.value;
-        userInput.placeholder = `Message ${currentModel}...`;
+        userInput.placeholder = `Введите сообщение для ${currentModel}...`;
     });
 
     // Обработчик новой беседы
@@ -461,8 +653,8 @@ document.addEventListener('DOMContentLoaded', () => {
             color: #0066ff;
         }
         .message-text {
-            line-height: 1.6;
-            font-size: 16px;
+            line-height: 1.5;
+            font-size: 0.9rem;
         }
         .message-text p {
             margin: 0.8em 0;
@@ -478,7 +670,7 @@ document.addEventListener('DOMContentLoaded', () => {
             padding: 2px 6px;
             border-radius: 4px;
             font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 0.9em;
+            font-size: 0.85em;
             color: #e6e6e6;
         }
         .message-text pre {
@@ -502,8 +694,8 @@ document.addEventListener('DOMContentLoaded', () => {
             background-color: transparent;
             padding: 0;
             border-radius: 0;
-            font-size: 0.95em;
-            line-height: 1.5;
+            font-size: 0.85em;
+            line-height: 1.4;
             display: block;
             color: #e6e6e6;
         }
@@ -570,23 +762,93 @@ document.addEventListener('DOMContentLoaded', () => {
         .action-btn.continue-btn {
             color: #0066ff;
             font-size: 1.1em;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
+
+        .action-btn.continue-btn.thinking {
+            animation: pulseAndGlow 2s infinite;
+        }
+
+        .action-btn.continue-btn.thinking i {
+            animation: rotateDotsWithFade 1.5s infinite;
+        }
+
+        @keyframes pulseAndGlow {
+            0% {
+                transform: scale(1);
+                color: #0066ff;
+                text-shadow: 0 0 5px rgba(0, 102, 255, 0.2);
+            }
+            50% {
+                transform: scale(1.1);
+                color: #00ccff;
+                text-shadow: 0 0 15px rgba(0, 204, 255, 0.6);
+            }
+            100% {
+                transform: scale(1);
+                color: #0066ff;
+                text-shadow: 0 0 5px rgba(0, 102, 255, 0.2);
+            }
+        }
+
+        @keyframes rotateDotsWithFade {
+            0% {
+                transform: rotate(0deg);
+                opacity: 0.4;
+            }
+            50% {
+                transform: rotate(180deg);
+                opacity: 1;
+            }
+            100% {
+                transform: rotate(360deg);
+                opacity: 0.4;
+            }
+        }
+
+        .action-btn.continue-btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: radial-gradient(circle, rgba(0, 102, 255, 0.2) 0%, transparent 70%);
+            transition: all 0.5s ease;
+            border-radius: 50%;
+            z-index: -1;
+            opacity: 0;
+        }
+
+        .action-btn.continue-btn.thinking::after {
+            width: 150%;
+            height: 150%;
+            opacity: 1;
+            top: -25%;
+            left: -25%;
+        }
+
         .action-btn.continue-btn:hover {
-            color: #0052cc;
+            color: #00ccff;
+            transform: translateY(-1px);
+            text-shadow: 0 2px 4px rgba(0, 102, 255, 0.3);
         }
         @media (max-width: 768px) {
             .message-text pre {
                 margin: 0.5rem -0.5rem;
                 border-radius: 8px;
-                font-size: 14px;
+                font-size: 0.85rem;
             }
             .message-text code {
-                font-size: 0.85em;
+                font-size: 0.8em;
             }
             .message-text pre code {
                 padding: 0.5rem;
                 white-space: pre-wrap;
                 word-break: break-word;
+                font-size: 0.8em;
             }
         }
         .code-block {
@@ -617,8 +879,275 @@ document.addEventListener('DOMContentLoaded', () => {
             top: 0.5rem;
             left: 0.5rem;
             color: #666;
-            font-size: 0.8em;
+            font-size: 0.75em;
             font-family: 'Montserrat', sans-serif;
+        }
+
+        /* Стили для кнопки загрузки изображений */
+        .image-upload-btn {
+            background: none;
+            border: none;
+            color: #666;
+            padding: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.2em;
+        }
+
+        .image-upload-btn:hover {
+            color: #0066ff;
+            transform: scale(1.1);
+        }
+
+        /* Стили для модального окна галереи */
+        .gallery-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .gallery-modal.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .gallery-content {
+            background: #1e1e1e;
+            width: 90%;
+            max-width: 800px;
+            margin: auto;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .gallery-header {
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+        }
+
+        .gallery-header h2 {
+            margin: 0;
+            color: #fff;
+            font-size: 1.2em;
+        }
+
+        .close-gallery {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: color 0.3s ease;
+        }
+
+        .close-gallery:hover {
+            color: #fff;
+        }
+
+        .gallery-body {
+            padding: 1rem;
+        }
+
+        .upload-area {
+            border: 2px dashed #444;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 1rem;
+        }
+
+        .upload-area:hover {
+            border-color: #0066ff;
+            background: rgba(0, 102, 255, 0.1);
+        }
+
+        .upload-area i {
+            font-size: 2em;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+
+        .upload-area p {
+            color: #666;
+            margin: 0;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .gallery-item {
+            position: relative;
+            aspect-ratio: 1;
+            overflow: hidden;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .gallery-item:hover {
+            transform: scale(1.05);
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .gallery-item .remove-image {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(0, 0, 0, 0.5);
+            border: none;
+            color: #fff;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .gallery-item:hover .remove-image {
+            opacity: 1;
+        }
+
+        /* Стили для изображений в чате */
+        .message-text img {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+            margin: 0.5rem 0;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .message-text img:hover {
+            transform: scale(1.02);
+        }
+
+        /* Добавляем стили для информации о файле */
+        .file-info {
+            background: linear-gradient(135deg, rgba(42, 42, 42, 0.8) 0%, rgba(26, 26, 26, 0.8) 100%);
+            border-radius: 16px;
+            margin: 0.5rem 1rem;
+            padding: 0.8rem 1rem;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .file-info:hover {
+            transform: translateY(-1px);
+        }
+
+        .file-preview {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .file-info-content {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+            min-width: 0;
+            font-size: 0.85rem;
+        }
+
+        .file-info-content i {
+            color: #0066ff;
+        }
+
+        .file-name {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: #fff;
+        }
+
+        .file-size {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.8rem;
+            padding-left: 0.5rem;
+        }
+
+        .remove-file {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.5);
+            padding: 0.3rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .remove-file:hover {
+            color: #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            .file-info {
+                margin: 0.3rem 0.5rem;
+                padding: 0.4rem 0.6rem;
+            }
+            
+            .file-info-content {
+                font-size: 0.8rem;
+            }
+            
+            .file-size {
+                font-size: 0.75rem;
+            }
+        }
+
+        /* Добавляем стили для изображений в сообщениях */
+        .image-message {
+            background: rgba(42, 42, 42, 0.6);
+            border-radius: 12px;
+            padding: 10px;
+            margin-bottom: 10px;
+            max-width: 100%;
+        }
+        .image-message img {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+            display: block;
+        }
+        .image-message div {
+            margin-top: 10px;
+            color: #e6e6e6;
+            font-size: 0.9rem;
+            line-height: 1.5;
         }
     `;
     document.head.appendChild(style);
@@ -753,22 +1282,62 @@ document.addEventListener('DOMContentLoaded', () => {
         throw new Error('Все API endpoints недоступны');
     }
 
-    // Функция для прямого общения с AI
+    // Обработчик изменения уровня детализации
+    const detailLevel = document.getElementById('detailLevel');
+    const sliderLabels = document.querySelectorAll('.slider-labels span');
+
+    // Функция для обновления активного лейбла
+    function updateActiveLabel() {
+        const value = parseInt(detailLevel.value);
+        sliderLabels.forEach((label, index) => {
+            if (index === value) {
+                label.classList.add('active');
+            } else {
+                label.classList.remove('active');
+            }
+        });
+    }
+
+    // Обработчики событий для ползунка
+    detailLevel.addEventListener('input', updateActiveLabel);
+    detailLevel.addEventListener('change', () => {
+        localStorage.setItem('detailLevel', detailLevel.value);
+    });
+
+    // Клик по лейблам
+    sliderLabels.forEach((label, index) => {
+        label.addEventListener('click', () => {
+            detailLevel.value = index;
+            updateActiveLabel();
+            localStorage.setItem('detailLevel', index);
+        });
+    });
+
+    // Модифицируем функцию directAIChat для учета уровня детализации
     async function directAIChat(messages, model = currentModel || DEFAULT_MODEL) {
         try {
-            // Проверяем наличие системного сообщения
             const hasSystemMessage = messages.some(msg => msg.role === 'system');
+            const currentRole = localStorage.getItem('selectedRole') || 'assistant';
+            const detailLevelValue = parseInt(localStorage.getItem('detailLevel') || '1');
             
+            let systemMessage = roleSystemMessages[currentRole];
+            
+            // Добавляем инструкции по детализации
+            const detailInstructions = {
+                0: "Отвечай максимально кратко и по существу, в 1-2 предложения.",
+                1: "Отвечай с умеренной детализацией, сохраняя баланс между краткостью и информативностью.",
+                2: "Давай максимально подробные и развернутые ответы, с примерами и дополнительной информацией."
+            };
+            
+            systemMessage += " " + detailInstructions[detailLevelValue];
+
             if (!hasSystemMessage) {
-                // Добавляем системное сообщение в зависимости от выбранной роли
-                const currentRole = localStorage.getItem('selectedRole') || 'assistant';
                 messages.unshift({
                     role: "system",
-                    content: roleSystemMessages[currentRole]
+                    content: systemMessage
                 });
             }
 
-            // Добавляем историю диалога, если включена память контекста
             let fullMessages = messages;
             if (document.getElementById('contextMemory').checked) {
                 fullMessages = [...messageHistory, ...messages];
@@ -829,4 +1398,17 @@ document.addEventListener('DOMContentLoaded', () => {
             return null;
         }
     }
+
+    // Загрузка сохраненного значения при инициализации
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedDetailLevel = localStorage.getItem('detailLevel');
+        if (savedDetailLevel !== null) {
+            detailLevel.value = savedDetailLevel;
+            updateActiveLabel();
+        } else {
+            updateActiveLabel(); // Для начального состояния
+        }
+        
+        // ... existing initialization code ...
+    });
 }); 
