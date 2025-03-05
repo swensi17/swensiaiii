@@ -243,7 +243,11 @@ document.addEventListener('DOMContentLoaded', () => {
             continueBtn.addEventListener('click', () => {
                 if (!isGenerating) {
                     const continuePrompt = "continue";
-                    sendMessage(continuePrompt, false, messageText, content);
+                    continueBtn.classList.add('thinking');
+                    sendMessage(continuePrompt, false, messageText, content)
+                        .finally(() => {
+                            continueBtn.classList.remove('thinking');
+                        });
                 }
             });
         }
@@ -570,9 +574,78 @@ document.addEventListener('DOMContentLoaded', () => {
         .action-btn.continue-btn {
             color: #0066ff;
             font-size: 1.1em;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
+
+        .action-btn.continue-btn.thinking {
+            animation: pulseAndGlow 2s infinite;
+        }
+
+        .action-btn.continue-btn.thinking i {
+            animation: rotateDotsWithFade 1.5s infinite;
+        }
+
+        @keyframes pulseAndGlow {
+            0% {
+                transform: scale(1);
+                color: #0066ff;
+                text-shadow: 0 0 5px rgba(0, 102, 255, 0.2);
+            }
+            50% {
+                transform: scale(1.1);
+                color: #00ccff;
+                text-shadow: 0 0 15px rgba(0, 204, 255, 0.6);
+            }
+            100% {
+                transform: scale(1);
+                color: #0066ff;
+                text-shadow: 0 0 5px rgba(0, 102, 255, 0.2);
+            }
+        }
+
+        @keyframes rotateDotsWithFade {
+            0% {
+                transform: rotate(0deg);
+                opacity: 0.4;
+            }
+            50% {
+                transform: rotate(180deg);
+                opacity: 1;
+            }
+            100% {
+                transform: rotate(360deg);
+                opacity: 0.4;
+            }
+        }
+
+        .action-btn.continue-btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: radial-gradient(circle, rgba(0, 102, 255, 0.2) 0%, transparent 70%);
+            transition: all 0.5s ease;
+            border-radius: 50%;
+            z-index: -1;
+            opacity: 0;
+        }
+
+        .action-btn.continue-btn.thinking::after {
+            width: 150%;
+            height: 150%;
+            opacity: 1;
+            top: -25%;
+            left: -25%;
+        }
+
         .action-btn.continue-btn:hover {
-            color: #0052cc;
+            color: #00ccff;
+            transform: translateY(-1px);
+            text-shadow: 0 2px 4px rgba(0, 102, 255, 0.3);
         }
         @media (max-width: 768px) {
             .message-text pre {
