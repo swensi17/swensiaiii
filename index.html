@@ -2,11 +2,41 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="AI Chat">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#1a1a1a">
+    <meta name="format-detection" content="telephone=no">
     <title>AI Чат - AI Creative Hub</title>
     <link rel="stylesheet" href="styles/chat.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @supports (padding-top: env(safe-area-inset-top)) {
+            .chat-wrapper {
+                padding-top: env(safe-area-inset-top);
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+            .chat-header {
+                padding-top: max(0.8rem, env(safe-area-inset-top));
+            }
+            .chat-input-panel {
+                padding-bottom: max(0.8rem, env(safe-area-inset-bottom));
+            }
+        }
+        
+        @media (display-mode: standalone) {
+            body {
+                overscroll-behavior: none;
+            }
+            .chat-wrapper {
+                height: 100vh;
+                height: -webkit-fill-available;
+            }
+        }
+    </style>
 </head>
 <body class="chat-page">
     <div class="chat-wrapper">
@@ -18,30 +48,31 @@
                 </button>
                 <div class="model-selector">
                     <select id="modelSelect">
-                        <option value="openai">OpenAI GPT-4o-mini</option>
+                        <option value="claude-sonnet">Claude 3.7 Sonnet (Beta)</option>
                         <option value="openai-large" selected>OpenAI GPT-4o</option>
-                        <option value="openai-reasoning">OpenAI o1-mini</option>
+                        <option value="deepseek-r1">DeepSeek-R1 Distill Qwen 32B</option>
+                        <option value="deepseek">DeepSeek-V3</option>
+                        <option value="claude-hybridspace">Claude Hybridspace</option>
                         <option value="qwen-coder">Qwen 2.5 Coder 32B</option>
                         <option value="llama">Llama 3.3 70B</option>
+                        <option value="searchgpt">SearchGPT</option>
+                        <option value="openai">OpenAI GPT-4o-mini</option>
+                        <option value="openai-reasoning">OpenAI o1-mini</option>
                         <option value="mistral">Mistral Nemo</option>
                         <option value="unity">Unity with Mistral Large</option>
                         <option value="midijourney">Midijourney musical transformer</option>
-                        <option value="rtist">Rtist image generator</option>
-                        <option value="searchgpt">SearchGPT with realtime search</option>
+                        <option value="llama-scaleway">Llama (Scaleway)</option>
                         <option value="evil">Evil Mode - Experimental</option>
-                        <option value="deepseek">DeepSeek-V3</option>
-                        <option value="claude-hybridspace">Claude Hybridspace</option>
-                        <option value="deepseek-r1">DeepSeek-R1 Distill Qwen 32B</option>
                         <option value="deepseek-reasoner">DeepSeek R1 - Full</option>
                         <option value="llamalight">Llama 3.1 8B Instruct</option>
                         <option value="llamaguard">Llamaguard 7B AWQ</option>
-                        <option value="gemini">Gemini 2.0 Flash</option>
-                        <option value="gemini-thinking">Gemini 2.0 Flash Thinking</option>
+                        <option value="gemini" disabled>Gemini 2.0 Flash (В разработке)</option>
+                        <option value="gemini-thinking" disabled>Gemini 2.0 Flash Thinking (В разработке)</option>
                         <option value="hormoz">Hormoz 8b</option>
                         <option value="hypnosis-tracy">Hypnosis Tracy</option>
                         <option value="sur">Sur AI Assistant</option>
                         <option value="sur-mistral">Sur AI Assistant (Mistral)</option>
-                        <option value="llama-scaleway">Llama (Scaleway)</option>
+                        <option value="rtist">Rtist image generator</option>
                     </select>
                 </div>
                 <button id="newChat" class="new-chat-btn">
@@ -79,7 +110,10 @@
         <!-- Нижняя панель ввода -->
         <footer class="chat-input-panel">
             <div class="input-container">
-                <textarea id="userInput" placeholder="Message Text" rows="1"></textarea>
+                <button id="imageUpload" class="image-upload-btn" title="Загрузить изображение">
+                    <i class="fas fa-image"></i>
+                </button>
+                <textarea id="userInput" placeholder="Введите сообщение..." rows="1"></textarea>
                 <button id="sendMessage" class="send-button">
                     <i class="fas fa-arrow-up"></i>
                 </button>
@@ -102,33 +136,33 @@
                     <div class="roles-grid">
                         <div class="role-card" data-role="assistant">
                             <i class="fas fa-robot"></i>
-                            <h4>Обычный ассистент</h4>
-                            <p>Стандартный режим общения</p>
-                        </div>
+                                <h4>Обычный ассистент</h4>
+                                <p>Стандартный режим общения</p>
+                            </div>
                         <div class="role-card" data-role="developer">
                             <i class="fas fa-code"></i>
-                            <h4>Программист</h4>
-                            <p>Помощь с кодом и разработкой</p>
-                        </div>
+                                <h4>Программист</h4>
+                                <p>Помощь с кодом и разработкой</p>
+                            </div>
                         <div class="role-card" data-role="writer">
                             <i class="fas fa-pen-fancy"></i>
-                            <h4>Писатель</h4>
-                            <p>Помощь с текстами и статьями</p>
-                        </div>
+                                <h4>Писатель</h4>
+                                <p>Помощь с текстами и статьями</p>
+                            </div>
                         <div class="role-card" data-role="teacher">
                             <i class="fas fa-graduation-cap"></i>
-                            <h4>Учитель</h4>
-                            <p>Обучение и объяснение</p>
+                                <h4>Учитель</h4>
+                                <p>Обучение и объяснение</p>
                         </div>
                         <div class="role-card" data-role="unrestricted">
                             <i class="fas fa-unlock"></i>
-                            <h4>Без ограничений 18+</h4>
-                            <p>Общение без фильтров</p>
+                                <h4>Без ограничений 18+</h4>
+                                <p>Общение без фильтров</p>
                         </div>
                         <div class="role-card" data-role="creative">
                             <i class="fas fa-paint-brush"></i>
-                            <h4>Креативный режим</h4>
-                            <p>Генерация идей и контента</p>
+                                <h4>Креативный режим</h4>
+                                <p>Генерация идей и контента</p>
                         </div>
                     </div>
                 </div>
@@ -158,6 +192,26 @@
                         </label>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно галереи -->
+    <div id="galleryModal" class="gallery-modal">
+        <div class="gallery-content">
+            <div class="gallery-header">
+                <h2>Галерея изображений</h2>
+                <button class="close-gallery">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="gallery-body">
+                <div class="upload-area" id="uploadArea">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Перетащите изображение сюда или кликните для выбора</p>
+                    <input type="file" id="fileInput" accept="image/*" multiple hidden>
+                </div>
+                <div class="gallery-grid" id="galleryGrid"></div>
             </div>
         </div>
     </div>
