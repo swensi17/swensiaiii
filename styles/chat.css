@@ -1,0 +1,909 @@
+.chat-page {
+    background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+    color: #ffffff;
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.chat-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: 100%;
+    margin: 0 auto;
+    background-color: #1a1a1a;
+}
+
+/* Шапка */
+.chat-header {
+    background-color: rgba(26, 26, 26, 0.8);
+    padding: 0.8rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.settings-button {
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.settings-button:hover {
+    color: #0066ff;
+    transform: rotate(90deg);
+}
+
+.model-selector {
+    position: relative;
+    flex: 1;
+    max-width: 300px;
+}
+
+.model-selector select {
+    width: 100%;
+    background: rgba(42, 42, 42, 0.6);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.8rem 2.5rem 0.8rem 1rem;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.model-selector select option {
+    background: rgba(26, 26, 26, 0.98);
+    color: #ffffff;
+    padding: 1rem;
+    font-size: 0.95rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.2s ease;
+    opacity: 0;
+    animation: fadeIn 0.2s ease forwards;
+}
+
+.model-selector select option:last-child {
+    border-bottom: none;
+}
+
+.model-selector select option:hover {
+    background: linear-gradient(135deg, rgba(0, 102, 255, 0.2) 0%, rgba(0, 82, 204, 0.2) 100%);
+}
+
+.model-selector select option:checked {
+    background: linear-gradient(135deg, rgba(0, 102, 255, 0.3) 0%, rgba(0, 82, 204, 0.3) 100%);
+    color: #fff;
+}
+
+/* Стилизация для Webkit (Chrome, Safari) */
+.model-selector select::-webkit-listbox {
+    background: rgba(26, 26, 26, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 0.5rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+/* Стилизация скроллбара */
+.model-selector select::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.model-selector select::-webkit-scrollbar-track {
+    background: rgba(26, 26, 26, 0.5);
+    border-radius: 3px;
+}
+
+.model-selector select::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    transition: all 0.3s ease;
+}
+
+.model-selector select::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Стилизация для Firefox */
+@-moz-document url-prefix() {
+    .model-selector select {
+        background-color: rgba(26, 26, 26, 0.98);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+    
+    .model-selector select option {
+        background-color: rgba(26, 26, 26, 0.98);
+        padding: 1rem;
+    }
+}
+
+.model-selector::after {
+    content: '\f107';
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(255, 255, 255, 0.6);
+    pointer-events: none;
+    transition: all 0.3s ease;
+}
+
+.model-selector:hover::after {
+    color: rgba(255, 255, 255, 0.8);
+    transform: translateY(-50%) translateY(1px);
+}
+
+.new-chat-btn {
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 0.5rem;
+}
+
+/* Область сообщений */
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.message {
+    max-width: 92%;
+    margin-bottom: 0.5rem;
+    width: fit-content;
+}
+
+.message-content {
+    display: flex;
+    gap: 0.8rem;
+    align-items: flex-start;
+}
+
+.ai-message {
+    align-self: flex-start;
+}
+
+.user-message {
+    align-self: flex-end;
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.user-message .message-content {
+    flex-direction: row-reverse;
+}
+
+.ai-avatar {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #2a2a2a 0%, #333333 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ai-avatar i {
+    font-size: 1rem;
+    background: linear-gradient(135deg, #fff 0%, #ccc 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.message-text {
+    background: linear-gradient(135deg, #2a2a2a 0%, #333333 100%);
+    padding: 1rem 1.2rem;
+    border-radius: 16px;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #e6e6e6;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.user-message .message-text {
+    background: linear-gradient(135deg, #0066ff 0%, #0052cc 100%);
+    border: none;
+}
+
+/* Код в сообщениях */
+.code-block {
+    background-color: #1a1a1a;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 0.5rem 0;
+    position: relative;
+}
+
+.code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.code-language {
+    color: #888;
+}
+
+.copy-code-btn {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.copy-code-btn:hover {
+    color: #fff;
+}
+
+.code-content {
+    font-family: 'Consolas', 'Monaco', monospace;
+    white-space: pre;
+    overflow-x: auto;
+    color: #e6e6e6;
+}
+
+.code-comment {
+    color: #666;
+}
+
+/* Подсветка синтаксиса */
+.keyword { color: #ff79c6; }
+.string { color: #50fa7b; }
+.number { color: #bd93f9; }
+.function { color: #50fa7b; }
+.comment { color: #6272a4; }
+
+.message-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.3rem;
+    margin-left: 2.8rem;
+}
+
+.user-message .message-actions {
+    margin-left: 0;
+    margin-right: 0;
+    justify-content: flex-end;
+    padding-right: 0.5rem;
+}
+
+.action-btn {
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    padding: 0.3rem;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    border-radius: 6px;
+}
+
+.action-btn:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+/* Панель ввода */
+.chat-input-panel {
+    background-color: #1a1a1a;
+    border-top: 1px solid #333;
+    padding: 0.8rem;
+}
+
+.input-container {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    background: rgba(42, 42, 42, 0.6);
+    border-radius: 20px;
+    padding: 0.5rem 0.8rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.input-container:focus-within {
+    background: rgba(42, 42, 42, 0.8);
+    border-color: rgba(0, 102, 255, 0.3);
+    box-shadow: 0 0 15px rgba(0, 102, 255, 0.1);
+}
+
+#userInput {
+    flex: 1;
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 0.95rem;
+    resize: none;
+    padding: 0.4rem;
+    min-height: 20px;
+    max-height: 120px;
+    font-family: inherit;
+    line-height: 1.4;
+    outline: none;
+}
+
+#userInput::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.send-button {
+    background: linear-gradient(135deg, #0066ff 0%, #0052cc 100%);
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 0.6rem;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    border-radius: 16px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0, 102, 255, 0.2);
+}
+
+.send-button:hover {
+    background: linear-gradient(135deg, #0052cc 0%, #004099 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3);
+}
+
+.send-button:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 4px rgba(0, 102, 255, 0.2);
+}
+
+.send-button i {
+    font-size: 0.9rem;
+}
+
+/* Нижняя панель с кнопками */
+.bottom-panel {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    padding: 0.8rem;
+    border-top: 1px solid #333;
+}
+
+.bottom-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #2a2a2a;
+    border: none;
+    color: #fff;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+}
+
+.bottom-button:hover {
+    background-color: #333;
+}
+
+.bottom-button i {
+    font-size: 1rem;
+}
+
+/* Скроллбар */
+.chat-messages::-webkit-scrollbar {
+    width: 4px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 2px;
+}
+
+/* Уведомления */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    z-index: 1000;
+    font-size: 0.9rem;
+}
+
+/* Адаптивность */
+@media (min-width: 768px) {
+    .chat-wrapper {
+        max-width: 1200px;
+        margin: 2rem auto;
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        height: calc(100vh - 4rem);
+        overflow: hidden;
+        background: rgba(26, 26, 26, 0.6);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+    }
+
+    .chat-header {
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        background: rgba(26, 26, 26, 0.8);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 1.2rem 2rem;
+    }
+
+    .settings-button {
+        font-size: 1.2rem;
+        transition: all 0.2s ease;
+    }
+
+    .settings-button:hover {
+        color: #0066ff;
+        transform: translateX(-2px);
+    }
+
+    .model-selector select {
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        background: rgba(42, 42, 42, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease;
+        font-size: 1rem;
+        padding: 0.8rem 1rem;
+    }
+
+    .model-selector select:hover {
+        background: rgba(52, 52, 52, 0.8);
+        border-color: rgba(255, 255, 255, 0.2);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .model-selector select:focus {
+        outline: none;
+        background: rgba(52, 52, 52, 0.9);
+        border-color: rgba(0, 102, 255, 0.5);
+        box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.2);
+    }
+
+    .new-chat-btn {
+        font-size: 1.2rem;
+        transition: all 0.2s ease;
+        padding: 0.8rem;
+        border-radius: 12px;
+    }
+
+    .new-chat-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-1px);
+    }
+
+    .chat-messages {
+        padding: 2rem;
+        gap: 1.5rem;
+    }
+
+    .message {
+        max-width: 70%;
+    }
+
+    .message-text {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .chat-input-panel {
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        background: rgba(26, 26, 26, 0.8);
+        padding: 1.5rem 2rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .input-container {
+        padding: 0.8rem;
+        max-width: 85%;
+        margin: 0 auto;
+    }
+
+    .input-container:focus-within {
+        border-color: rgba(0, 102, 255, 0.5);
+        box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.2);
+    }
+
+    #userInput {
+        padding: 0.5rem;
+        font-size: 1rem;
+        line-height: 1.6;
+    }
+
+    .input-container {
+        max-width: 80%;
+        margin: 0 auto;
+        padding: 0.6rem 1rem;
+    }
+    
+    .chat-input-panel {
+        padding: 1.2rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .chat-wrapper {
+        max-width: 100%;
+        margin: 0;
+        background: rgba(26, 26, 26, 0.95);
+        padding: 0;
+    }
+    
+    .chat-header {
+        padding: 1rem;
+        background: rgba(26, 26, 26, 0.98);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .model-selector {
+        max-width: 200px;
+    }
+    
+    .model-selector select {
+        padding: 0.6rem 2rem 0.6rem 0.8rem;
+        font-size: 0.9rem;
+    }
+
+    .message {
+        max-width: 95%;
+    }
+
+    .chat-messages {
+        padding: 1rem 0.5rem;
+    }
+
+    .input-container {
+        margin: 0 0.8rem;
+        padding: 0.4rem 0.6rem;
+    }
+
+    .chat-input-panel {
+        background: rgba(26, 26, 26, 0.98);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 0.8rem 0;
+    }
+
+    .settings-button {
+        font-size: 1.1rem;
+        padding: 0.4rem;
+    }
+}
+
+/* Анимация индикатора печатания */
+.typing-indicator {
+    color: #888;
+    display: inline-block;
+}
+
+.typing-indicator::after {
+    content: '';
+    animation: typingDots 1.5s infinite;
+}
+
+@keyframes typingDots {
+    0% { content: ''; }
+    25% { content: '.'; }
+    50% { content: '..'; }
+    75% { content: '...'; }
+    100% { content: ''; }
+}
+
+/* Удаляем стили для input-footer */
+.input-footer {
+    display: none;
+}
+
+/* Добавляем плавное появление опций */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Добавляем задержку для каждой опции */
+.model-selector select option:nth-child(1) { animation-delay: 0.05s; }
+.model-selector select option:nth-child(2) { animation-delay: 0.1s; }
+.model-selector select option:nth-child(3) { animation-delay: 0.15s; }
+.model-selector select option:nth-child(4) { animation-delay: 0.2s; }
+.model-selector select option:nth-child(5) { animation-delay: 0.25s; }
+.model-selector select option:nth-child(6) { animation-delay: 0.3s; }
+.model-selector select option:nth-child(7) { animation-delay: 0.35s; }
+.model-selector select option:nth-child(8) { animation-delay: 0.4s; }
+.model-selector select option:nth-child(9) { animation-delay: 0.45s; }
+.model-selector select option:nth-child(10) { animation-delay: 0.5s; }
+.model-selector select option:nth-child(11) { animation-delay: 0.55s; }
+.model-selector select option:nth-child(12) { animation-delay: 0.6s; }
+.model-selector select option:nth-child(13) { animation-delay: 0.65s; }
+.model-selector select option:nth-child(14) { animation-delay: 0.7s; }
+.model-selector select option:nth-child(15) { animation-delay: 0.75s; }
+.model-selector select option:nth-child(16) { animation-delay: 0.8s; }
+.model-selector select option:nth-child(17) { animation-delay: 0.85s; }
+.model-selector select option:nth-child(18) { animation-delay: 0.9s; }
+.model-selector select option:nth-child(19) { animation-delay: 0.95s; }
+.model-selector select option:nth-child(20) { animation-delay: 1s; }
+
+/* Модальное окно настроек */
+.settings-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+}
+
+.settings-modal.active {
+    display: flex;
+    animation: fadeIn 0.3s ease;
+}
+
+.settings-content {
+    background: rgba(26, 26, 26, 0.95);
+    border-radius: 20px;
+    width: 80%;
+    max-width: 600px;
+    max-height: 80vh;
+    margin: auto;
+    overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.settings-header h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #fff;
+}
+
+.close-settings {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.close-settings:hover {
+    color: #fff;
+    transform: rotate(90deg);
+}
+
+.settings-body {
+    padding: 1rem;
+}
+
+.settings-section {
+    margin-bottom: 1.5rem;
+}
+
+.settings-section h3 {
+    color: #fff;
+    margin-bottom: 0.8rem;
+    font-size: 1rem;
+}
+
+.roles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.8rem;
+    margin-bottom: 1.2rem;
+}
+
+.role-card {
+    background: rgba(42, 42, 42, 0.6);
+    border-radius: 12px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.role-card:hover {
+    background: rgba(52, 52, 52, 0.8);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+.role-card.active {
+    background: linear-gradient(135deg, rgba(0, 102, 255, 0.2) 0%, rgba(0, 82, 204, 0.2) 100%);
+    border-color: rgba(0, 102, 255, 0.5);
+}
+
+.role-card i {
+    font-size: 1.5rem;
+    margin-bottom: 0.8rem;
+    color: #0066ff;
+}
+
+.role-card h4 {
+    color: #fff;
+    margin: 0 0 0.4rem 0;
+    font-size: 0.95rem;
+}
+
+.role-card p {
+    color: #888;
+    margin: 0;
+    font-size: 0.85rem;
+}
+
+.settings-options {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.switch-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #fff;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #333;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #0066ff;
+}
+
+input:checked + .slider:before {
+    transform: translateX(24px);
+}
+
+/* Адаптивность для модального окна */
+@media (max-width: 768px) {
+    .settings-content {
+        width: 90%;
+        max-height: 85vh;
+        margin: auto 10px;
+        border-radius: 16px;
+    }
+
+    .settings-header {
+        padding: 0.8rem;
+    }
+
+    .settings-body {
+        padding: 0.8rem;
+    }
+
+    .roles-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .role-card {
+        padding: 0.8rem;
+    }
+
+    .role-card i {
+        font-size: 1.2rem;
+        margin-bottom: 0.6rem;
+    }
+
+    .role-card h4 {
+        font-size: 0.9rem;
+    }
+
+    .role-card p {
+        font-size: 0.8rem;
+    }
+} 
