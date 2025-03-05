@@ -4,11 +4,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendButton = document.getElementById('sendMessage');
     const modelSelect = document.getElementById('modelSelect');
     const newChatButton = document.getElementById('newChat');
+    const detailLevel = document.getElementById('detailLevel');
+    const sliderLabels = document.querySelectorAll('.slider-labels span');
 
     let currentModel = modelSelect.value;
     let messageHistory = [];
     let isGenerating = false;
     let currentRole = localStorage.getItem('selectedRole') || 'assistant';
+
+    // Инструкции по детализации ответов
+    const detailInstructions = {
+        0: "Отвечай максимально кратко и по существу, в 1-2 предложения.",
+        1: "Отвечай с умеренной детализацией, сохраняя баланс между краткостью и информативностью.",
+        2: "Давай максимально подробные и развернутые ответы, с примерами и дополнительной информацией."
+    };
 
     const BASE_URL = "https://text.pollinations.ai";
     const BACKUP_URLS = [
@@ -16,6 +25,17 @@ document.addEventListener('DOMContentLoaded', () => {
         "https://api-backup.pollinations.ai",
         "https://api2.pollinations.ai"
     ];
+
+    // Конфигурация Gemini API
+    const GEMINI_API_KEY = "AIzaSyDsaLMF0oAumS2hAj5_ci9GPc4GTCLvzPg";
+    
+    // Маппинг моделей Gemini
+    const GEMINI_MODELS = {
+        'experimental-2.0': 'gemini-2.0-pro',
+        'experimental-1206': 'gemini-2.0-pro',
+        'flash': 'gemini-2.0-flash',
+        'gemini-pro': 'gemini-2.0-pro'
+    };
 
     // Словарь с системными сообщениями для каждой роли
     const roleSystemMessages = {
@@ -46,6 +66,40 @@ document.addEventListener('DOMContentLoaded', () => {
     const galleryGrid = document.getElementById('galleryGrid');
     
     let uploadedImages = [];
+
+    // Инициализация уровня детализации
+    const savedDetailLevel = localStorage.getItem('detailLevel');
+    if (savedDetailLevel !== null) {
+        detailLevel.value = savedDetailLevel;
+        updateActiveLabel();
+    }
+
+    // Функция обновления активного лейбла
+    function updateActiveLabel() {
+        const value = parseInt(detailLevel.value);
+        sliderLabels.forEach((label, index) => {
+            if (index === value) {
+                label.classList.add('active');
+            } else {
+                label.classList.remove('active');
+            }
+        });
+    }
+
+    // Обработчики событий для ползунка
+    detailLevel.addEventListener('input', updateActiveLabel);
+    detailLevel.addEventListener('change', () => {
+        localStorage.setItem('detailLevel', detailLevel.value);
+    });
+
+    // Клик по лейблам
+    sliderLabels.forEach((label, index) => {
+        label.addEventListener('click', () => {
+            detailLevel.value = index;
+            updateActiveLabel();
+            localStorage.setItem('detailLevel', index);
+        });
+    });
 
     // Функция для конвертации изображения в base64
     function getBase64(file) {
@@ -426,11 +480,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!isRegeneration && !targetElement) {
                 messageHistory.push({ role: "user", content: message });
                 addMessage(message, true);
-        }
+            }
 
             let messageText;
             let existingContent = '';
-
+            
             if (targetElement) {
                 messageText = targetElement;
                 existingContent = previousContent || messageText.textContent;
@@ -440,19 +494,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 const avatar = messageContent.querySelector('.ai-avatar');
                 avatar.insertAdjacentHTML('afterend', '<span class="typing-indicator">печатает</span>');
                 messageText = messageContent.querySelector('.message-text');
-    }
+            }
 
-            // Отправляем запрос к AI
-            const response = await directAIChat([{ role: "user", content: message }]);
+            // Получаем текущий уровень детализации
+            const detailLevelValue = parseInt(localStorage.getItem('detailLevel') || '1');
+            const systemMessage = roleSystemMessages[currentRole] + " " + detailInstructions[detailLevelValue];
 
-            if (response) {
-                const aiResponse = response.response;
-            
+            // Пробуем сначала прямое подключение
+            const directResponse = await directAIChat([
+                { role: "system", content: systemMessage },
+                { role: "user", content: message }
+            ], currentModel);
+                
+            if (directResponse) {
+                const aiResponse = directResponse.response;
+                    
                 if (targetElement) {
                     const messageContent = messageText.closest('.message-content');
                     const typingIndicator = messageContent.querySelector('.typing-indicator');
                     if (typingIndicator) typingIndicator.remove();
-            
+
                     if (existingContent.includes('</code></pre>')) {
                         const lastCodeBlock = existingContent.lastIndexOf('</code></pre>');
                         const beforeCode = existingContent.substring(0, lastCodeBlock);
@@ -464,29 +525,33 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else {
                         const newContent = existingContent + '\n\n' + aiResponse;
                         messageText.innerHTML = formatMarkdown(newContent);
-            }
+                                }
+
+                    if (messageHistory.length > 0) {
+                        messageHistory[messageHistory.length - 1].content = messageText.textContent;
+                    }
                 } else {
+                    messageHistory.push({ role: "assistant", content: aiResponse });
                     const messageContent = messageText.closest('.message-content');
                     const typingIndicator = messageContent.querySelector('.typing-indicator');
                     if (typingIndicator) typingIndicator.remove();
                     messageText.innerHTML = formatMarkdown(aiResponse);
-            }
+                    }
 
                 // Автопрокрутка, если включена
                 if (document.getElementById('autoScroll').checked) {
                     chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
+                            }
                     }
-        } catch (error) {
+                } catch (error) {
             console.error('Error:', error);
             if (!targetElement) {
                 const lastAiMessage = chatMessages.querySelector('.ai-message:last-child');
                 if (lastAiMessage) {
                     lastAiMessage.remove();
-        }
-
-    }
-            showToast('Произошла ошибка при обработке запроса', 'error');
+            }
+                showToast('Произошла ошибка при обработке запроса', 'error');
+            }
         } finally {
             toggleUI(false);
         }
@@ -1282,53 +1347,15 @@ document.addEventListener('DOMContentLoaded', () => {
         throw new Error('Все API endpoints недоступны');
     }
 
-    // Обработчик изменения уровня детализации
-    const detailLevel = document.getElementById('detailLevel');
-    const sliderLabels = document.querySelectorAll('.slider-labels span');
-
-    // Функция для обновления активного лейбла
-    function updateActiveLabel() {
-        const value = parseInt(detailLevel.value);
-        sliderLabels.forEach((label, index) => {
-            if (index === value) {
-                label.classList.add('active');
-            } else {
-                label.classList.remove('active');
-            }
-        });
-    }
-
-    // Обработчики событий для ползунка
-    detailLevel.addEventListener('input', updateActiveLabel);
-    detailLevel.addEventListener('change', () => {
-        localStorage.setItem('detailLevel', detailLevel.value);
-    });
-
-    // Клик по лейблам
-    sliderLabels.forEach((label, index) => {
-        label.addEventListener('click', () => {
-            detailLevel.value = index;
-            updateActiveLabel();
-            localStorage.setItem('detailLevel', index);
-        });
-    });
-
     // Модифицируем функцию directAIChat для учета уровня детализации
     async function directAIChat(messages, model = currentModel || DEFAULT_MODEL) {
         try {
+            // Получаем системное сообщение и уровень детализации
             const hasSystemMessage = messages.some(msg => msg.role === 'system');
             const currentRole = localStorage.getItem('selectedRole') || 'assistant';
             const detailLevelValue = parseInt(localStorage.getItem('detailLevel') || '1');
             
             let systemMessage = roleSystemMessages[currentRole];
-            
-            // Добавляем инструкции по детализации
-            const detailInstructions = {
-                0: "Отвечай максимально кратко и по существу, в 1-2 предложения.",
-                1: "Отвечай с умеренной детализацией, сохраняя баланс между краткостью и информативностью.",
-                2: "Давай максимально подробные и развернутые ответы, с примерами и дополнительной информацией."
-            };
-            
             systemMessage += " " + detailInstructions[detailLevelValue];
 
             if (!hasSystemMessage) {
@@ -1343,6 +1370,83 @@ document.addEventListener('DOMContentLoaded', () => {
                 fullMessages = [...messageHistory, ...messages];
             }
 
+            // Проверяем, является ли модель Gemini моделью
+            if (GEMINI_MODELS[model]) {
+                console.log('Using Gemini model:', model);
+                const geminiModel = GEMINI_MODELS[model];
+                
+                try {
+                    // Формируем URL с API ключом
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${GEMINI_API_KEY}`;
+                    
+                    console.log('Sending request to Gemini API...');
+                    
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{
+                                    text: fullMessages[fullMessages.length - 1].content
+                                }]
+                            }]
+                        })
+                    });
+
+                    console.log('Response status:', response.status);
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('Gemini API error response:', errorText);
+                        throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+                    }
+
+                    const data = await response.json();
+                    console.log('Gemini API response:', data);
+
+                    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts) {
+                        console.error('Invalid Gemini API response structure:', data);
+                        throw new Error('Invalid response from Gemini API');
+                    }
+
+                    const aiResponse = data.candidates[0].content.parts[0].text;
+
+                    // Сохраняем сообщения в историю только если включена память контекста
+                    if (document.getElementById('contextMemory').checked) {
+                        messages.forEach(msg => {
+                            if (msg.role !== 'system') {
+                                messageHistory.push(msg);
+                            }
+                        });
+                        messageHistory.push({
+                            role: "assistant",
+                            content: aiResponse
+                        });
+
+                        // Ограничиваем историю последними 10 сообщениями
+                        messageHistory = messageHistory.slice(-10);
+                    }
+
+                    // Воспроизводим звук уведомления, если включено
+                    if (document.getElementById('soundNotifications').checked) {
+                        const audio = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAEAAABVgANTU1NTU1Q0NDQ0NDUFBQUFBQXl5eXl5ea2tra2tra3l5eXl5eYaGhoaGhpSUlJSUlKGhoaGhoaGvr6+vr6+8vLy8vLzKysrKysrX19fX19fX5OTk5OTk8vLy8vLy////////AAAAAExhdmM1OC4xMwAAAAAAAAAAAAAAACQCgAAAAAAAAAVY82AhbwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/+MYxAALACwAAP/AADwQKVE9YWDGPkQWpT66yk4+zIiYPoTUaT3tnU+OkZUwY0ZIg/oGjvxzqCAIDv8T5JbjDvwkcHIQ+D/8QSC3/+MYxA8L0DU0A/9iABnwW8Z+75zorLCZv1nCthQ5QFRVU8IBkHLFW1v/P8L2dUWpXOmZ/+XetliFAGkD55fQDCR/86KMYD/+MYxBULwDU4AP8eADwMSLL8mY7yZfON1aX5OXrJ2/l5W+oQj4iyOfPz5H/XzMiNYEdUhDtD5weBYFwXB8HwfACgIAgAAA==');
+                        audio.play();
+                    }
+
+                    return {
+                        response: aiResponse,
+                        model: geminiModel
+                    };
+                } catch (error) {
+                    console.error('Detailed error with Gemini API:', error);
+                    showToast(`Ошибка Gemini API: ${error.message}`, 'error');
+                    throw error;
+                }
+            }
+
+            // Существующий код для других моделей
             const options = {
                 method: 'POST',
                 headers: {
