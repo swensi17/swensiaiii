@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Чат - AI Creative Hub</title>
+    <link rel="stylesheet" href="styles/chat.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="chat-page">
+    <div class="chat-wrapper">
+        <!-- Шапка чата -->
+        <header class="chat-header">
+            <div class="header-content">
+                <button class="settings-button" title="Настройки">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <div class="model-selector">
+                    <select id="modelSelect">
+                        <option value="openai">OpenAI GPT-4o-mini</option>
+                        <option value="openai-large" selected>OpenAI GPT-4o</option>
+                        <option value="openai-reasoning">OpenAI o1-mini</option>
+                        <option value="qwen-coder">Qwen 2.5 Coder 32B</option>
+                        <option value="llama">Llama 3.3 70B</option>
+                        <option value="mistral">Mistral Nemo</option>
+                        <option value="unity">Unity with Mistral Large</option>
+                        <option value="midijourney">Midijourney musical transformer</option>
+                        <option value="rtist">Rtist image generator</option>
+                        <option value="searchgpt">SearchGPT with realtime search</option>
+                        <option value="evil">Evil Mode - Experimental</option>
+                        <option value="deepseek">DeepSeek-V3</option>
+                        <option value="claude-hybridspace">Claude Hybridspace</option>
+                        <option value="deepseek-r1">DeepSeek-R1 Distill Qwen 32B</option>
+                        <option value="deepseek-reasoner">DeepSeek R1 - Full</option>
+                        <option value="llamalight">Llama 3.1 8B Instruct</option>
+                        <option value="llamaguard">Llamaguard 7B AWQ</option>
+                        <option value="gemini">Gemini 2.0 Flash</option>
+                        <option value="gemini-thinking">Gemini 2.0 Flash Thinking</option>
+                        <option value="hormoz">Hormoz 8b</option>
+                        <option value="hypnosis-tracy">Hypnosis Tracy</option>
+                        <option value="sur">Sur AI Assistant</option>
+                        <option value="sur-mistral">Sur AI Assistant (Mistral)</option>
+                        <option value="llama-scaleway">Llama (Scaleway)</option>
+                    </select>
+                </div>
+                <button id="newChat" class="new-chat-btn">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Основная область чата -->
+        <main class="chat-messages" id="chatMessages">
+            <div class="message ai-message">
+                <div class="message-content">
+                    <div class="ai-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="message-text">Привет! Чем могу помочь? 😊</div>
+                </div>
+                <div class="message-actions">
+                    <button class="action-btn copy-btn" title="Копировать">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                    <button class="action-btn regenerate-btn" title="Регенерировать">
+                        <i class="fas fa-redo"></i>
+                    </button>
+                    <button class="action-btn like-btn" title="Нравится">
+                        <i class="fas fa-thumbs-up"></i>
+                    </button>
+                    <button class="action-btn dislike-btn" title="Не нравится">
+                        <i class="fas fa-thumbs-down"></i>
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Нижняя панель ввода -->
+        <footer class="chat-input-panel">
+            <div class="input-container">
+                <textarea id="userInput" placeholder="Message Text" rows="1"></textarea>
+                <button id="sendMessage" class="send-button">
+                    <i class="fas fa-arrow-up"></i>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Модальное окно настроек -->
+    <div id="settingsModal" class="settings-modal">
+        <div class="settings-content">
+            <div class="settings-header">
+                <h2>Настройки</h2>
+                <button class="close-settings">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="settings-body">
+                <div class="settings-section">
+                    <h3>Роли ИИ</h3>
+                    <div class="roles-grid">
+                        <div class="role-card" data-role="assistant">
+                            <i class="fas fa-robot"></i>
+                            <h4>Обычный ассистент</h4>
+                            <p>Стандартный режим общения</p>
+                        </div>
+                        <div class="role-card" data-role="developer">
+                            <i class="fas fa-code"></i>
+                            <h4>Программист</h4>
+                            <p>Помощь с кодом и разработкой</p>
+                        </div>
+                        <div class="role-card" data-role="writer">
+                            <i class="fas fa-pen-fancy"></i>
+                            <h4>Писатель</h4>
+                            <p>Помощь с текстами и статьями</p>
+                        </div>
+                        <div class="role-card" data-role="teacher">
+                            <i class="fas fa-graduation-cap"></i>
+                            <h4>Учитель</h4>
+                            <p>Обучение и объяснение</p>
+                        </div>
+                        <div class="role-card" data-role="unrestricted">
+                            <i class="fas fa-unlock"></i>
+                            <h4>Без ограничений 18+</h4>
+                            <p>Общение без фильтров</p>
+                        </div>
+                        <div class="role-card" data-role="creative">
+                            <i class="fas fa-paint-brush"></i>
+                            <h4>Креативный режим</h4>
+                            <p>Генерация идей и контента</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3>Дополнительные настройки</h3>
+                    <div class="settings-options">
+                        <label class="switch-label">
+                            <span>Память контекста</span>
+                            <label class="switch">
+                                <input type="checkbox" id="contextMemory" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </label>
+                        <label class="switch-label">
+                            <span>Автопрокрутка</span>
+                            <label class="switch">
+                                <input type="checkbox" id="autoScroll" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </label>
+                        <label class="switch-label">
+                            <span>Звуковые уведомления</span>
+                            <label class="switch">
+                                <input type="checkbox" id="soundNotifications">
+                                <span class="slider"></span>
+                            </label>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="scripts/chat.js"></script>
+</body>
+</html> 
