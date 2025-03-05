@@ -57,31 +57,33 @@
                 </button>
                 <div class="model-selector">
                     <select id="modelSelect">
-                        <option value="claude-sonnet">Claude 3.7 Sonnet (Beta)</option>
-                        <option value="openai-large" selected>OpenAI GPT-4o</option>
-                        <option value="deepseek-r1">DeepSeek-R1 Distill Qwen 32B</option>
-                        <option value="deepseek">DeepSeek-V3</option>
                         <option value="claude-hybridspace">Claude Hybridspace</option>
-                        <option value="qwen-coder">Qwen 2.5 Coder 32B</option>
-                        <option value="llama">Llama 3.3 70B</option>
-                        <option value="searchgpt">SearchGPT</option>
-                        <option value="openai">OpenAI GPT-4o-mini</option>
-                        <option value="openai-reasoning">OpenAI o1-mini</option>
-                        <option value="mistral">Mistral Nemo</option>
-                        <option value="unity">Unity with Mistral Large</option>
-                        <option value="midijourney">Midijourney musical transformer</option>
-                        <option value="llama-scaleway">Llama (Scaleway)</option>
-                        <option value="evil">Evil Mode - Experimental</option>
+                        <option value="claude-sonnet">Claude 3.7 Sonnet (Beta)</option>
+                        <option value="deepseek">DeepSeek-V3</option>
+                        <option value="deepseek-r1">DeepSeek-R1 Distill Qwen 32B</option>
                         <option value="deepseek-reasoner">DeepSeek R1 - Full</option>
-                        <option value="llamalight">Llama 3.1 8B Instruct</option>
-                        <option value="llamaguard">Llamaguard 7B AWQ</option>
-                        <option value="gemini" disabled>Gemini 2.0 Flash (В разработке)</option>
-                        <option value="gemini-thinking" disabled>Gemini 2.0 Flash Thinking (В разработке)</option>
+                        <option value="evil" disabled>Evil Mode - Experimental (в разработке)</option>
+                        <option value="experimental-1206">Gemini 1206 Pro</option>
+                        <option value="experimental-2.0">Gemini 2.0 Pro</option>
+                        <option value="flash">Gemini Flash</option>
+                        <option value="gemini-pro">Gemini Pro</option>
                         <option value="hormoz">Hormoz 8b</option>
                         <option value="hypnosis-tracy">Hypnosis Tracy</option>
+                        <option value="llama">Llama 3.3 70B</option>
+                        <option value="llamaguard">Llamaguard 7B AWQ</option>
+                        <option value="llamalight">Llama 3.1 8B Instruct</option>
+                        <option value="llama-scaleway">Llama (Scaleway)</option>
+                        <option value="midijourney">Midijourney musical transformer</option>
+                        <option value="mistral">Mistral Nemo</option>
+                        <option value="openai" selected>OpenAI GPT-4o-mini</option>
+                        <option value="openai-large">OpenAI GPT-4o</option>
+                        <option value="openai-reasoning" disabled>OpenAI o1-mini (в разработке)</option>
+                        <option value="qwen-coder">Qwen 2.5 Coder 32B</option>
+                        <option value="rtist">Rtist image generator</option>
+                        <option value="searchgpt">SearchGPT</option>
                         <option value="sur">Sur AI Assistant</option>
                         <option value="sur-mistral">Sur AI Assistant (Mistral)</option>
-                        <option value="rtist">Rtist image generator</option>
+                        <option value="unity">Unity with Mistral Large</option>
                     </select>
                 </div>
                 <button id="newChat" class="new-chat-btn">
@@ -243,6 +245,23 @@
         const DEFAULT_MODEL = "openai-large";
         let conversationHistory = [];
 
+        // Конфигурация Gemini API
+        const GEMINI_API_KEY = "AIzaSyAQWf1DNBToy0jIu00XOqt5UGpMG1AKllw";
+        const PROXY_CONFIG = {
+            host: "45.91.209.135",
+            port: "11894",
+            username: "CqF9Te",
+            password: "zVhMqr"
+        };
+
+        // Маппинг моделей Gemini
+        const GEMINI_MODELS = {
+            'experimental-2.0': 'gemini-1.5-pro',
+            'experimental-1206': 'gemini-1.5-pro',
+            'flash': 'gemini-1.5-flash',
+            'gemini-pro': 'gemini-1.5-pro'
+        };
+
         // Словарь с системными сообщениями для каждой роли
         const roleSystemMessages = {
             assistant: "Ты обычный AI ассистент. Отвечай четко и по делу, будь вежливым и полезным.",
@@ -256,7 +275,78 @@
         // Функция для прямого общения с AI
         async function directAIChat(messages, model = currentModel || DEFAULT_MODEL) {
             try {
-                // Проверяем наличие системного сообщения
+                // Проверяем, является ли модель Gemini
+                if (GEMINI_MODELS[model]) {
+                    const lastMessage = messages[messages.length - 1].content;
+                    const proxyUrl = `http://${PROXY_CONFIG.username}:${PROXY_CONFIG.password}@${PROXY_CONFIG.host}:${PROXY_CONFIG.port}`;
+                    const geminiModel = GEMINI_MODELS[model];
+                    
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}/generateContent?key=${GEMINI_API_KEY}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{
+                                    text: lastMessage
+                                }]
+                            }],
+                            generationConfig: {
+                                temperature: 0.9,
+                                topK: 1,
+                                topP: 1,
+                                maxOutputTokens: 2048,
+                            },
+                            safetySettings: [
+                                {
+                                    category: "HARM_CATEGORY_HARASSMENT",
+                                    threshold: "BLOCK_NONE"
+                                },
+                                {
+                                    category: "HARM_CATEGORY_HATE_SPEECH",
+                                    threshold: "BLOCK_NONE"
+                                },
+                                {
+                                    category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                                    threshold: "BLOCK_NONE"
+                                },
+                                {
+                                    category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                                    threshold: "BLOCK_NONE"
+                                }
+                            ]
+                        }),
+                        agent: new Proxy(proxyUrl)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Gemini API response was not ok');
+                    }
+
+                    const data = await response.json();
+                    const aiResponse = data.candidates[0].content.parts[0].text;
+
+                    if (document.getElementById('contextMemory').checked) {
+                        messages.forEach(msg => {
+                            if (msg.role !== 'system') {
+                                conversationHistory.push(msg);
+                            }
+                        });
+                        conversationHistory.push({
+                            role: "assistant",
+                            content: aiResponse
+                        });
+                        conversationHistory = conversationHistory.slice(-10);
+                    }
+
+                    return {
+                        response: aiResponse,
+                        model: model
+                    };
+                }
+
+                // Для остальных моделей используем существующую логику
                 const hasSystemMessage = messages.some(msg => msg.role === 'system');
                 
                 if (!hasSystemMessage) {
