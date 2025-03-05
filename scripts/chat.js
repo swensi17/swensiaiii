@@ -426,11 +426,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!isRegeneration && !targetElement) {
                 messageHistory.push({ role: "user", content: message });
                 addMessage(message, true);
-            }
+        }
 
             let messageText;
             let existingContent = '';
-            
+
             if (targetElement) {
                 messageText = targetElement;
                 existingContent = previousContent || messageText.textContent;
@@ -440,19 +440,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const avatar = messageContent.querySelector('.ai-avatar');
                 avatar.insertAdjacentHTML('afterend', '<span class="typing-indicator">печатает</span>');
                 messageText = messageContent.querySelector('.message-text');
-            }
+    }
 
             // Отправляем запрос к AI
             const response = await directAIChat([{ role: "user", content: message }]);
-            
+
             if (response) {
                 const aiResponse = response.response;
-                
+            
                 if (targetElement) {
                     const messageContent = messageText.closest('.message-content');
                     const typingIndicator = messageContent.querySelector('.typing-indicator');
                     if (typingIndicator) typingIndicator.remove();
-                    
+            
                     if (existingContent.includes('</code></pre>')) {
                         const lastCodeBlock = existingContent.lastIndexOf('</code></pre>');
                         const beforeCode = existingContent.substring(0, lastCodeBlock);
@@ -464,27 +464,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else {
                         const newContent = existingContent + '\n\n' + aiResponse;
                         messageText.innerHTML = formatMarkdown(newContent);
-                    }
+            }
                 } else {
                     const messageContent = messageText.closest('.message-content');
                     const typingIndicator = messageContent.querySelector('.typing-indicator');
                     if (typingIndicator) typingIndicator.remove();
                     messageText.innerHTML = formatMarkdown(aiResponse);
-                }
+            }
 
                 // Автопрокрутка, если включена
                 if (document.getElementById('autoScroll').checked) {
                     chatMessages.scrollTop = chatMessages.scrollHeight;
-                }
             }
+                    }
         } catch (error) {
             console.error('Error:', error);
             if (!targetElement) {
                 const lastAiMessage = chatMessages.querySelector('.ai-message:last-child');
                 if (lastAiMessage) {
                     lastAiMessage.remove();
-                }
-            }
+        }
+
+    }
             showToast('Произошла ошибка при обработке запроса', 'error');
         } finally {
             toggleUI(false);
@@ -1281,22 +1282,62 @@ document.addEventListener('DOMContentLoaded', () => {
         throw new Error('Все API endpoints недоступны');
     }
 
-    // Функция для прямого общения с AI
+    // Обработчик изменения уровня детализации
+    const detailLevel = document.getElementById('detailLevel');
+    const sliderLabels = document.querySelectorAll('.slider-labels span');
+
+    // Функция для обновления активного лейбла
+    function updateActiveLabel() {
+        const value = parseInt(detailLevel.value);
+        sliderLabels.forEach((label, index) => {
+            if (index === value) {
+                label.classList.add('active');
+            } else {
+                label.classList.remove('active');
+            }
+        });
+    }
+
+    // Обработчики событий для ползунка
+    detailLevel.addEventListener('input', updateActiveLabel);
+    detailLevel.addEventListener('change', () => {
+        localStorage.setItem('detailLevel', detailLevel.value);
+    });
+
+    // Клик по лейблам
+    sliderLabels.forEach((label, index) => {
+        label.addEventListener('click', () => {
+            detailLevel.value = index;
+            updateActiveLabel();
+            localStorage.setItem('detailLevel', index);
+        });
+    });
+
+    // Модифицируем функцию directAIChat для учета уровня детализации
     async function directAIChat(messages, model = currentModel || DEFAULT_MODEL) {
         try {
-            // Проверяем наличие системного сообщения
             const hasSystemMessage = messages.some(msg => msg.role === 'system');
+            const currentRole = localStorage.getItem('selectedRole') || 'assistant';
+            const detailLevelValue = parseInt(localStorage.getItem('detailLevel') || '1');
             
+            let systemMessage = roleSystemMessages[currentRole];
+            
+            // Добавляем инструкции по детализации
+            const detailInstructions = {
+                0: "Отвечай максимально кратко и по существу, в 1-2 предложения.",
+                1: "Отвечай с умеренной детализацией, сохраняя баланс между краткостью и информативностью.",
+                2: "Давай максимально подробные и развернутые ответы, с примерами и дополнительной информацией."
+            };
+            
+            systemMessage += " " + detailInstructions[detailLevelValue];
+
             if (!hasSystemMessage) {
-                // Добавляем системное сообщение в зависимости от выбранной роли
-                const currentRole = localStorage.getItem('selectedRole') || 'assistant';
                 messages.unshift({
                     role: "system",
-                    content: roleSystemMessages[currentRole]
+                    content: systemMessage
                 });
             }
 
-            // Добавляем историю диалога, если включена память контекста
             let fullMessages = messages;
             if (document.getElementById('contextMemory').checked) {
                 fullMessages = [...messageHistory, ...messages];
@@ -1357,4 +1398,17 @@ document.addEventListener('DOMContentLoaded', () => {
             return null;
         }
     }
+
+    // Загрузка сохраненного значения при инициализации
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedDetailLevel = localStorage.getItem('detailLevel');
+        if (savedDetailLevel !== null) {
+            detailLevel.value = savedDetailLevel;
+            updateActiveLabel();
+        } else {
+            updateActiveLabel(); // Для начального состояния
+        }
+        
+        // ... existing initialization code ...
+    });
 }); 
