@@ -259,75 +259,115 @@
 
 /* Код в сообщениях */
 .code-block {
-    background: rgba(13, 13, 13, 0.95);
+    background: #1e1e2e;
     border-radius: 12px;
-    padding: 0.8rem;
-    margin: 0.5rem 0;
+    padding: 1.2rem;
+    margin: 0.8rem 0;
     position: relative;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    font-size: 0.85rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .code-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 0.5rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 1rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .code-language {
-    color: rgba(255, 255, 255, 0.6);
+    color: #89b4fa;
+    font-weight: 600;
     font-size: 0.8rem;
     text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .copy-code-btn {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(137, 180, 250, 0.1);
     border: none;
-    color: rgba(255, 255, 255, 0.6);
+    color: #89b4fa;
     cursor: pointer;
-    padding: 0.3rem 0.6rem;
-    font-size: 0.75rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
     border-radius: 6px;
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.5rem;
     transition: all 0.2s ease;
 }
 
 .copy-code-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-    color: #fff;
+    background: rgba(137, 180, 250, 0.2);
+    transform: translateY(-1px);
 }
 
 .copy-code-btn.copied {
-    background: rgba(0, 255, 0, 0.15);
+    background: rgba(80, 250, 123, 0.1);
     color: #50fa7b;
 }
 
 .code-content {
-    font-family: 'Consolas', 'Monaco', monospace;
-    white-space: pre-wrap;
-    word-break: break-word;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
     overflow-x: auto;
-    color: #e6e6e6;
-    font-size: 0.8rem;
-    line-height: 1.4;
-    padding-right: 0.5rem;
-}
-
-.code-comment {
-    color: #666;
+    color: #cdd6f4;
+    padding: 0;
 }
 
 /* Подсветка синтаксиса */
-.keyword { color: #ff79c6; }
-.string { color: #50fa7b; }
-.number { color: #bd93f9; }
-.function { color: #50fa7b; }
-.comment { color: #6272a4; }
+.keyword { color: #f38ba8; font-weight: 600; }
+.builtin { color: #89b4fa; }
+.string { color: #a6e3a1; }
+.number { color: #fab387; }
+.function { color: #89dceb; }
+.comment { color: #7f849c; font-style: italic; }
+.operator { color: #f38ba8; }
+.variable { color: #cdd6f4; }
+.class { color: #89b4fa; }
+.decorator { color: #f5c2e7; }
+.boolean { color: #fab387; font-weight: 600; }
+
+/* Скроллбар для кода */
+.code-content::-webkit-scrollbar {
+    height: 6px;
+    background: transparent;
+}
+
+.code-content::-webkit-scrollbar-thumb {
+    background: rgba(137, 180, 250, 0.2);
+    border-radius: 3px;
+}
+
+.code-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(137, 180, 250, 0.3);
+}
+
+/* Адаптивность для мобильных */
+@media (max-width: 768px) {
+    .code-block {
+        padding: 1rem;
+        margin: 0.6rem 0;
+        font-size: 0.85rem;
+    }
+
+    .code-content {
+        font-size: 0.8rem;
+        line-height: 1.5;
+    }
+
+    .code-language {
+        font-size: 0.75rem;
+    }
+
+    .copy-code-btn {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.75rem;
+    }
+}
 
 .message-actions {
     display: flex;
