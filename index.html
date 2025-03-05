@@ -163,5 +163,153 @@
     </div>
 
     <script src="scripts/chat.js"></script>
+    <script>
+        // Конфигурация для прямого подключения к AI
+        const BASE_URL = "https://text.pollinations.ai";
+        const DEFAULT_MODEL = "openai-large";
+        let conversationHistory = [];
+
+        // Функция для прямого общения с AI
+        async function directAIChat(messages, model = DEFAULT_MODEL) {
+            try {
+                // Проверяем наличие системного сообщения
+                const hasSystemMessage = messages.some(msg => msg.role === 'system');
+                
+                if (!hasSystemMessage) {
+                    messages.unshift({
+                        role: "system",
+                        content: "Ты обычный AI ассистент. Отвечай четко и по делу, будь вежливым и полезным."
+                    });
+                }
+
+                // Добавляем историю диалога
+                const fullMessages = [...conversationHistory, ...messages];
+
+                const response = await fetch(`${BASE_URL}/openai`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: fullMessages,
+                        seed: Math.floor(Math.random() * 1000000)
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                const data = await response.json();
+                const aiResponse = data.choices[0].message.content;
+
+                // Сохраняем сообщения в историю
+                messages.forEach(msg => {
+                    if (msg.role !== 'system') {
+                        conversationHistory.push(msg);
+                    }
+                });
+                conversationHistory.push({
+                    role: "assistant",
+                    content: aiResponse
+                });
+
+                // Ограничиваем историю последними 10 сообщениями
+                conversationHistory = conversationHistory.slice(-10);
+
+                return {
+                    response: aiResponse,
+                    model: data.model || model
+                };
+            } catch (error) {
+                console.error('Error in directAIChat:', error);
+                return null;
+            }
+        }
+
+        // Функция для очистки истории
+        function clearConversationHistory() {
+            conversationHistory = [];
+        }
+
+        // Модифицируем существующую функцию sendMessage для использования прямого подключения
+        const originalSendMessage = window.sendMessage;
+        window.sendMessage = async function(message, isRegeneration = false, targetElement = null, previousContent = '') {
+            try {
+                if (isGenerating) return;
+                toggleUI(true);
+
+                if (!isRegeneration && !targetElement) {
+                    messageHistory.push({ role: "user", content: message });
+                    addMessage(message, true);
+                }
+
+                let messageText;
+                let existingContent = '';
+                
+                if (targetElement) {
+                    messageText = targetElement;
+                    existingContent = previousContent || messageText.textContent;
+                } else {
+                    const aiMessageDiv = addMessage('', false);
+                    const messageContent = aiMessageDiv.querySelector('.message-content');
+                    const avatar = messageContent.querySelector('.ai-avatar');
+                    avatar.insertAdjacentHTML('afterend', '<span class="typing-indicator">печатает</span>');
+                    messageText = messageContent.querySelector('.message-text');
+                }
+
+                // Пробуем сначала прямое подключение
+                const directResponse = await directAIChat([{ role: "user", content: message }], currentModel);
+                
+                if (directResponse) {
+                    const aiResponse = directResponse.response;
+                    
+                    if (targetElement) {
+                        const messageContent = messageText.closest('.message-content');
+                        const typingIndicator = messageContent.querySelector('.typing-indicator');
+                        if (typingIndicator) typingIndicator.remove();
+                        
+                        if (existingContent.includes('</code></pre>')) {
+                            const lastCodeBlock = existingContent.lastIndexOf('</code></pre>');
+                            const beforeCode = existingContent.substring(0, lastCodeBlock);
+                            const codeMatch = existingContent.match(/<pre data-language="([^"]+)"><code[^>]*>/);
+                            const language = codeMatch ? codeMatch[1] : 'text';
+                            const formattedResponse = '```' + language + '\n' + aiResponse + '\n```';
+                            const newContent = beforeCode + highlightCode(aiResponse, language) + '</code></pre>';
+                            messageText.innerHTML = newContent;
+                        } else {
+                            const newContent = existingContent + '\n\n' + aiResponse;
+                            messageText.innerHTML = formatMarkdown(newContent);
+                        }
+                        
+                        if (messageHistory.length > 0) {
+                            messageHistory[messageHistory.length - 1].content = messageText.textContent;
+                        }
+                    } else {
+                        messageHistory.push({ role: "assistant", content: aiResponse });
+                        const messageContent = messageText.closest('.message-content');
+                        const typingIndicator = messageContent.querySelector('.typing-indicator');
+                        if (typingIndicator) typingIndicator.remove();
+                        messageText.innerHTML = formatMarkdown(aiResponse);
+                    }
+                } else {
+                    // Если прямое подключение не удалось, используем оригинальный метод
+                    await originalSendMessage(message, isRegeneration, targetElement, previousContent);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                if (!targetElement) {
+                    const lastAiMessage = chatMessages.querySelector('.ai-message:last-child');
+                    if (lastAiMessage) {
+                        lastAiMessage.remove();
+                    }
+                    showToast('Произошла ошибка при обработке запроса', 'error');
+                }
+            } finally {
+                toggleUI(false);
+            }
+        };
+    </script>
 </body>
 </html> 
