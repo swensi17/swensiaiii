@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     // Конфигурация Gemini API
-    const GEMINI_API_KEY = "AIzaSyDsaLMF0oAumS2hAj5_ci9GPc4GTCLvzPg";
+    const GEMINI_API_KEY = "AIzaSyDr7Ul8M1fkudhPTgy4x3ZTscNK63zQQek";
     
     // Маппинг моделей Gemini
     const GEMINI_MODELS = {
